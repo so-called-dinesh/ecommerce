@@ -2,6 +2,7 @@ package com.dinesh.ecommerce.service;
 
 import com.dinesh.ecommerce.model.Product;
 import com.dinesh.ecommerce.repo.ProductRepo;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,5 +32,10 @@ public class ProductService {
 
     public void deleteProduct(int id) {
         productRepo.deleteById(id);
+    }
+
+    @Transactional
+    public List<Product> searchProducts(String keyword) {
+        return productRepo.searchProducts(keyword);
     }
 }
