@@ -38,6 +38,9 @@
 <!--			<groupId>org.springframework.boot</groupId>-->
 <!--			<artifactId>spring-boot-starter-security</artifactId>-->
 <!--		</dependency>-->
+
+		<!-- Source: https://mvnrepository.com/artifact/me.paulschwarz/spring-dotenv -->
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
