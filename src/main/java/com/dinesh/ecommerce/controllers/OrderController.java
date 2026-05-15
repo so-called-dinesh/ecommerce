@@ -4,6 +4,7 @@ import com.dinesh.ecommerce.model.OrderItem;
 import com.dinesh.ecommerce.model.dto.OrderRequest;
 import com.dinesh.ecommerce.model.dto.OrderResponse;
 import com.dinesh.ecommerce.service.OrderService;
+import jakarta.validation.Valid;
 import org.hibernate.type.OrderedSetType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -22,7 +23,7 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping("/place")
-    public ResponseEntity<OrderResponse> placeOrder(@RequestBody OrderRequest orderRequest){
+    public ResponseEntity<OrderResponse> placeOrder(@Valid @RequestBody OrderRequest orderRequest){
         OrderResponse orderResponse = orderService.placeOrder(orderRequest);
         return new ResponseEntity<>(orderResponse, HttpStatus.CREATED);
     }

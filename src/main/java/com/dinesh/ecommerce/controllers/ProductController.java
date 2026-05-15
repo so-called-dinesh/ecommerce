@@ -2,6 +2,7 @@ package com.dinesh.ecommerce.controllers;
 
 import com.dinesh.ecommerce.model.Product;
 import com.dinesh.ecommerce.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +27,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable int id){
+    public ResponseEntity<Product> getProductById(@PathVariable Long id){
         Product product = productService.getProductById(id);
         if(product != null){
             return new ResponseEntity<>(product, HttpStatus.OK);
@@ -37,7 +38,7 @@ public class ProductController {
     }
 
     @PostMapping("/add")
-    public ResponseEntity<?> addProduct(@RequestPart Product product, @RequestPart MultipartFile image){
+    public ResponseEntity<?> addProduct(@Valid @RequestPart Product product, @RequestPart MultipartFile image){
         Product savedProduct = null;
         try {
             savedProduct = productService.addOrUpdateProduct(product, image);
@@ -49,7 +50,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateProduct(@PathVariable int id, @RequestPart Product product, @RequestPart MultipartFile image){
+    public ResponseEntity<String> updateProduct(@PathVariable int id, @Valid @RequestPart Product product, @RequestPart MultipartFile image){
         Product updatedProduct =  null;
         try {
             updatedProduct = productService.addOrUpdateProduct(product, image);
@@ -61,7 +62,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteProduct(@PathVariable int id){
+    public ResponseEntity<String> deleteProduct(@PathVariable Long id){
         Product deleteProduct = productService.getProductById(id);
         if(deleteProduct != null){
             productService.deleteProduct(id);
