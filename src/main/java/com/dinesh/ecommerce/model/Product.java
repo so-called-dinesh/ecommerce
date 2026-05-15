@@ -2,27 +2,50 @@ package com.dinesh.ecommerce.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.regex.Pattern;
 
 @Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
+
+    @NotBlank(message = "Product name is required")
     private String name;
+
+    @NotBlank(message = "Description is required")
     private String description;
+
+    @NotBlank(message = "Brand is required")
     private String brand;
+
+    @NotNull(message = "Price is required")
+    @Positive(message = "Price must be greater than zero")
     private BigDecimal price;
+
+    @NotBlank(message = "Category is required")
     private String category;
+
+    @Min(value = 0, message = "Stock quantity cannot be negative")
+    private Integer stockQuantity;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
-    private Date releaseDate;
-    private boolean productAvailable;
-    private int stockQuantity;
+    private LocalDate releaseDate;
+
+    private Boolean productAvailable;
 
     private String imageName;
     private String imageType;
@@ -30,119 +53,4 @@ public class Product {
     private byte[] imageData;
 
 
-    public byte[] getImageData() {
-        return imageData;
-    }
-
-    public void setImageData(byte[] imageData) {
-        this.imageData = imageData;
-    }
-
-    public String getImageType() {
-        return imageType;
-    }
-
-    public void setImageType(String imageType) {
-        this.imageType = imageType;
-    }
-
-    public String getImageName() {
-        return imageName;
-    }
-
-    public void setImageName(String imageName) {
-        this.imageName = imageName;
-    }
-
-//    public Product(int id){
-//        this.id = id;
-//    }
-    public int getId() {
-        return id;
-    }
-
-    public int getStockQuantity() {
-        return stockQuantity;
-    }
-
-    public void setStockQuantity(int stockQuantity) {
-        this.stockQuantity = stockQuantity;
-    }
-
-    public boolean isProductAvailable() {
-        return productAvailable;
-    }
-
-    public void setProductAvailable(boolean productAvailable) {
-        this.productAvailable = productAvailable;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public Date getReleaseDate() {
-        return releaseDate;
-    }
-
-    public void setReleaseDate(Date releaseDate) {
-        this.releaseDate = releaseDate;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-    public String getBrand() {
-        return brand;
-    }
-
-    public void setBrand(String brand) {
-        this.brand = brand;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    @Override
-    public String toString() {
-        return "Product{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", description='" + description + '\'' +
-                ", brand='" + brand + '\'' +
-                ", price=" + price +
-                ", category='" + category + '\'' +
-                ", releaseDate=" + releaseDate +
-                ", productAvailable=" + productAvailable +
-                ", stockQuantity=" + stockQuantity +
-                ", imageName='" + imageName + '\'' +
-                ", imageType='" + imageType + '\'' +
-                ", imageData=" + Arrays.toString(imageData) +
-                '}';
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Product() {
-    }
 }

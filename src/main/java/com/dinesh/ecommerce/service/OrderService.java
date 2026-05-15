@@ -39,7 +39,7 @@ public class OrderService {
         List<OrderItem> orderItems = new ArrayList<>();
 
         for(OrderItemRequest itemRequest : request.items()){
-            Product product = productRepo.findById((int) itemRequest.productId())
+            Product product = productRepo.findById(itemRequest.productId())
                     .orElseThrow(() -> new RuntimeException("product not found"));
 
             product.setStockQuantity(product.getStockQuantity() - itemRequest.quantity());
