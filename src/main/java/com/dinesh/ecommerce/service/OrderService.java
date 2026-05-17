@@ -1,5 +1,7 @@
 package com.dinesh.ecommerce.service;
 
+import com.dinesh.ecommerce.Exceptions.InsufficientStockException;
+import com.dinesh.ecommerce.Exceptions.ResourceNotFoundException;
 import com.dinesh.ecommerce.model.Order;
 import com.dinesh.ecommerce.model.OrderItem;
 import com.dinesh.ecommerce.model.Product;
@@ -42,13 +44,13 @@ public class OrderService {
         for(OrderItemRequest itemRequest : request.items()){
 
             Product product = productRepo.findById(itemRequest.productId())
-                    .orElseThrow(() -> new RuntimeException("product not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + itemRequest.productId()));
 
             if(!product.getProductAvailable()){
-                throw new RuntimeException("Product is not available :" + product.getName());
+                throw new ResourceNotFoundException("Product is not available: " + product.getName());
             }
             if(product.getStockQuantity() < itemRequest.quantity()){
-                throw new RuntimeException("Insufficient Stock for the product " + product.getName() + ". Available: " + product.getStockQuantity()
+                throw new InsufficientStockException("Insufficient Stock for the product " + product.getName() + ". Available: " + product.getStockQuantity()
                         + ". Requested: " + itemRequest.quantity());
             }
             product.setStockQuantity(product.getStockQuantity() - itemRequest.quantity());
