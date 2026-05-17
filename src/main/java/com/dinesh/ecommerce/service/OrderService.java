@@ -1,5 +1,7 @@
 package com.dinesh.ecommerce.service;
 
+import com.dinesh.ecommerce.Exceptions.InsufficientStockException;
+import com.dinesh.ecommerce.Exceptions.ResourceNotFoundException;
 import com.dinesh.ecommerce.model.Order;
 import com.dinesh.ecommerce.model.OrderItem;
 import com.dinesh.ecommerce.model.Product;
@@ -9,6 +11,7 @@ import com.dinesh.ecommerce.model.dto.OrderRequest;
 import com.dinesh.ecommerce.model.dto.OrderResponse;
 import com.dinesh.ecommerce.repo.OrderRepo;
 import com.dinesh.ecommerce.repo.ProductRepo;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,7 +29,7 @@ public class OrderService {
     @Autowired
     private OrderRepo orderRepo;
 
-
+    @Transactional
     public OrderResponse placeOrder(OrderRequest request) {
         Order order = new Order();
 
@@ -39,9 +42,17 @@ public class OrderService {
         List<OrderItem> orderItems = new ArrayList<>();
 
         for(OrderItemRequest itemRequest : request.items()){
-            Product product = productRepo.findById(itemRequest.productId())
-                    .orElseThrow(() -> new RuntimeException("product not found"));
 
+            Product product = productRepo.findById(itemRequest.productId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + itemRequest.productId()));
+
+            if(!product.getProductAvailable()){
+                throw new ResourceNotFoundException("Product is not available: " + product.getName());
+            }
+            if(product.getStockQuantity() < itemRequest.quantity()){
+                throw new InsufficientStockException("Insufficient Stock for the product " + product.getName() + ". Available: " + product.getStockQuantity()
+                        + ". Requested: " + itemRequest.quantity());
+            }
             product.setStockQuantity(product.getStockQuantity() - itemRequest.quantity());
             productRepo.save(product);
 

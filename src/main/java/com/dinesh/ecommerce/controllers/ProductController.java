@@ -29,12 +29,7 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id){
         Product product = productService.getProductById(id);
-        if(product != null){
-            return new ResponseEntity<>(product, HttpStatus.OK);
-        }
-        else{
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        return ResponseEntity.ok(productService.getProductById(id));
     }
 
     @PostMapping("/add")
@@ -63,14 +58,10 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteProduct(@PathVariable Long id){
-        Product deleteProduct = productService.getProductById(id);
-        if(deleteProduct != null){
-            productService.deleteProduct(id);
-            return  new ResponseEntity<>("deleted", HttpStatus.OK);
-        }
-        else{
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        productService.getProductById(id);
+        productService.getProductById(id);
+        return ResponseEntity.ok("deleted");
+
     }
 
     @GetMapping("/search")

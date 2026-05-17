@@ -1,5 +1,6 @@
 package com.dinesh.ecommerce.service;
 
+import com.dinesh.ecommerce.Exceptions.ResourceNotFoundException;
 import com.dinesh.ecommerce.model.Product;
 import com.dinesh.ecommerce.repo.ProductRepo;
 import jakarta.transaction.Transactional;
@@ -20,7 +21,7 @@ public class ProductService {
     }
 
     public Product getProductById(Long id) {
-        return productRepo.findById(id).orElse(null);
+        return productRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Product not found with ID:"+ id));
     }
 
     public Product addOrUpdateProduct(Product product, MultipartFile image) throws IOException {
