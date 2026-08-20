@@ -25,10 +25,32 @@ public class ProductService {
     }
 
     public Product addOrUpdateProduct(Product product, MultipartFile image) throws IOException {
-        product.setImageName(image.getOriginalFilename());
-        product.setImageType(image.getContentType());
-        product.setImageData(image.getBytes());
+        if (image != null && !image.isEmpty()) {
+            product.setImageName(image.getOriginalFilename());
+            product.setImageType(image.getContentType());
+            product.setImageData(image.getBytes());
+        }
         return productRepo.save(product);
+    }
+
+    @Transactional
+    public Product updateProduct(Long id, Product updates, MultipartFile image) throws IOException {
+        Product existing = productRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + id));
+        existing.setName(updates.getName());
+        existing.setDescription(updates.getDescription());
+        existing.setBrand(updates.getBrand());
+        existing.setPrice(updates.getPrice());
+        existing.setCategory(updates.getCategory());
+        existing.setStockQuantity(updates.getStockQuantity());
+        existing.setReleaseDate(updates.getReleaseDate());
+        existing.setProductAvailable(updates.getProductAvailable());
+        if (image != null && !image.isEmpty()) {
+            existing.setImageName(image.getOriginalFilename());
+            existing.setImageType(image.getContentType());
+            existing.setImageData(image.getBytes());
+        }
+        return productRepo.save(existing);
     }
 
     public void deleteProduct(Long id) {

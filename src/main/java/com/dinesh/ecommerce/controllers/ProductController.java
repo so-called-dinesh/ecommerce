@@ -28,12 +28,11 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id){
-        Product product = productService.getProductById(id);
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
     @PostMapping("/add")
-    public ResponseEntity<?> addProduct(@Valid @RequestPart Product product, @RequestPart MultipartFile image){
+    public ResponseEntity<?> addProduct(@Valid @RequestPart Product product, @RequestPart(required = false) MultipartFile image){
         Product savedProduct = null;
         try {
             savedProduct = productService.addOrUpdateProduct(product, image);
@@ -45,22 +44,21 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateProduct(@PathVariable int id, @Valid @RequestPart Product product, @RequestPart MultipartFile image){
-        Product updatedProduct =  null;
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @Valid @RequestPart Product product, @RequestPart(required = false) MultipartFile image){
         try {
-            updatedProduct = productService.addOrUpdateProduct(product, image);
-            return new ResponseEntity<>(" updated", HttpStatus.OK);
+            Product updatedProduct = productService.updateProduct(id, product, image);
+            return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
         } catch (IOException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteProduct(@PathVariable Long id){
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id){
         productService.getProductById(id);
-        productService.getProductById(id);
-        return ResponseEntity.ok("deleted");
+        productService.deleteProduct(id);
+        return ResponseEntity.noContent().build();
 
     }
 
