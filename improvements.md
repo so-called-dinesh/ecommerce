@@ -25,3 +25,18 @@ Suggested improvements (priority order)
 6. Add controller/service integration tests (e.g., MockMvc + H2) covering order placement, stock decrement, and product CRUD.
 
 
+on 2026-08-20 
+
+fixed :
+
+    Bug 1 (DELETE did nothing): 
+
+    - ProductController.deleteProduct now calls productService.deleteProduct(id) for real and returns 204; removed the duplicate existence check.
+
+     Bug 2 (UPDATE broken):                                                                                         
+                                                                                                                    
+     - @PathVariable Long id is now used — the path id updates the correct product.                                 
+     - New updateProduct(id, updates, image) service method merges editable fields onto the existing product.       
+     - MultipartFile is optional — null/empty images are skipped instead of NPE-ing; metadata-only updates work.    
+                                                                                                                    
+     Also fixed: getProductById no longer double-queries the DB. Verified with mvn compile
