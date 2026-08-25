@@ -91,6 +91,7 @@ public class OrderService {
         return orderResponse;
     }
 
+    @Transactional
     public List<OrderResponse> getAllOrdersResponses() {
         List<Order> orders = orderRepo.findAll();
         List<OrderResponse> orderResponses = new ArrayList<>();

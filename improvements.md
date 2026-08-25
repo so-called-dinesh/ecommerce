@@ -40,3 +40,6 @@ fixed :
      - MultipartFile is optional — null/empty images are skipped instead of NPE-ing; metadata-only updates work.    
                                                                                                                     
      Also fixed: getProductById no longer double-queries the DB. Verified with mvn compile
+
+on 2026-08-24
+
