@@ -1,26 +1,8 @@
 # E-Commerce API
 
-A production-minded RESTful e-commerce backend built with Spring Boot. It manages **products** and **orders**, supports image uploads, real-time stock validation, product search, and ships with interactive API documentation out of the box.
+A Spring Boot RESTful e-commerce backend that manages **products** and **orders**. It supports image uploads, product search, stock validation at request time, and ships with interactive API documentation out of the box.
 
----
-
-## Table of Contents
-
-1. [Tech Stack](#tech-stack)
-2. [Architecture](#architecture)
-3. [Project Structure](#project-structure)
-4. [Data Model](#data-model)
-5. [Request Flow](#request-flow)
-6. [Prerequisites](#prerequisites)
-7. [Configuration](#configuration)
-8. [Running the Application](#running-the-application)
-9. [API Reference](#api-reference)
-10. [Error Handling](#error-handling)
-11. [Design Decisions](#design-decisions)
-12. [Testing](#testing)
-13. [Deployment](#deployment)
-14. [Roadmap / Suggested Improvements](#roadmap--suggested-improvements)
-15. [License](#license)
+This is a learning/prototype project — see [Roadmap](#roadmap) for what is not yet built.
 
 ---
 
@@ -36,72 +18,7 @@ A production-minded RESTful e-commerce backend built with Spring Boot. It manage
 | Validation   | Jakarta Bean Validation                               |
 | API Docs     | Springdoc OpenAPI (Swagger UI)                        |
 | Build Tool   | Maven (wrapper included)                              |
-| Utility      | Lombok (code generation), Spring Boot DevTools        |
-
----
-
-## Architecture
-
-The application follows a **classic layered architecture**, keeping a clear separation of concerns across four tiers.
-
-### Layered Diagram
-
-```mermaid
-graph TB
-    subgraph Client
-        A[REST Client / Frontend]
-    end
-
-    subgraph "Presentation Layer (controllers)"
-        B[ProductController]
-        C[OrderController]
-        D[TestController]
-        E[GlobalExceptionHandler]
-    end
-
-    subgraph "Service Layer"
-        F[ProductService]
-        G[OrderService]
-    end
-
-    subgraph "Persistence Layer"
-        H[ProductRepo]
-        I[OrderRepo]
-    end
-
-    subgraph "Database"
-        J[(PostgreSQL)]
-    end
-
-    A --> B
-    A --> C
-    A --> D
-    B --> F
-    C --> G
-    F --> H
-    G --> I
-    H --> J
-    I --> J
-    B & C --> E
-```
-
-### Layer Responsibilities
-
-| Layer           | Package              | Responsibility                                                        |
-|-----------------|----------------------|-----------------------------------------------------------------------|
-| Presentation    | `controllers`        | HTTP endpoint definitions, DTO binding, response shaping              |
-| Service         | `service`            | Business rules: stock checks, price calculation, transactional logic  |
-| Persistence     | `repo`               | Spring Data JPA repositories, custom queries (e.g., product search)   |
-| Domain          | `model`              | JPA entities (`Product`, `Order`, `OrderItem`) and request/response DTOs |
-| Error Handling  | `controllers`        | `@RestControllerAdvice` mapping exceptions to HTTP responses           |
-
-### Architectural Highlights
-
-- **Loose coupling**: controllers never touch the database; all persistence happens through repositories called from the service layer.
-- **DTO isolation**: the API surface uses records (`OrderRequest`, `OrderResponse`, `ErrorResponse`) so internal entity shapes are not leaked to clients.
-- **Centralized error handling**: every exception — business, validation, or unexpected — is translated into a consistent JSON error shape by `GlobalExceptionHandler`.
-- **Transaction safety**: order placement is wrapped in a single `@Transactional` boundary so stock decrements and order creation commit (or roll back) atomically.
-- **Environment-driven config**: no secrets in source; database credentials come from environment variables.
+| Utility      | Lombok, Spring Boot DevTools                          |
 
 ---
 
@@ -111,7 +28,6 @@ graph TB
 ecommerce/
 ├── pom.xml                        # Maven build definition & dependencies
 ├── mvnw / mvnw.cmd                # Maven wrapper scripts
-├── .mvn/wrapper/                  # Wrapper configuration
 └── src/
     ├── main/
     │   ├── java/com/dinesh/ecommerce/
@@ -144,50 +60,11 @@ ecommerce/
 
 ## Data Model
 
-### Entity Relationships
-
-```mermaid
-erDiagram
-    PRODUCT ||--o{ ORDER_ITEM : "contains"
-    ORDER ||--o{ ORDER_ITEM : "has"
-    PRODUCT {
-        bigint id PK
-        varchar name
-        varchar description
-        varchar brand
-        numeric price
-        varchar category
-        int stock_quantity
-        date release_date
-        boolean product_available
-        varchar image_name
-        varchar image_type
-        bytea image_data
-    }
-    ORDER {
-        bigint id PK
-        varchar order_id UK
-        varchar customer_name
-        varchar email
-        varchar status
-        date order_date
-    }
-    ORDER_ITEM {
-        int id PK
-        int quantity
-        numeric total_price
-        bigint product_id FK
-        bigint order_id FK
-    }
-```
-
 | Entity      | Key Fields                                           | Relationships                      |
 |-------------|------------------------------------------------------|------------------------------------|
 | `Product`   | `name`, `price`, `stockQuantity`, `category`, image  | `1:N` to `OrderItem`               |
 | `Order`     | `orderId` (unique), `customerName`, `email`, `status`| `1:N` to `OrderItem` (cascade all) |
 | `OrderItem` | `quantity`, `totalPrice`                             | `N:1` to `Product`, `N:1` to `Order` |
-
-Notes:
 
 - `Order.orderId` is a human-friendly unique business key (e.g. `ORD1A2B3C4D`).
 - `OrderItem.totalPrice` is computed as `product.price * quantity` at order time, storing a snapshot of the agreed price.
@@ -195,49 +72,18 @@ Notes:
 
 ---
 
-## Request Flow
+## Order Placement
 
-### Order Placement (core transaction)
+`POST /order/place` is wrapped in `@Transactional`. For each item in the request, the service:
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant OrderController
-    participant OrderService
-    participant ProductRepo
-    participant OrderRepo
-    participant DB
+1. Looks up the product (404 if missing)
+2. Checks `productAvailable` and `stockQuantity` (409 if unavailable or insufficient)
+3. Decrements stock and saves the product
+4. Builds the order with line items and saves via cascade
 
-    Client->>OrderController: POST /order/place (validated JSON)
-    OrderController->>OrderService: placeOrder(OrderRequest)
-    loop for each requested item
-        OrderService->>ProductRepo: findById(productId)
-        ProductRepo-->>OrderService: Product (or 404)
-        OrderService->>OrderService: check availability & stock
-        OrderService->>ProductRepo: save(product with decremented stock)
-    end
-    OrderService->>OrderRepo: save(Order + OrderItems cascade)
-    OrderRepo-->>DB: insert order & items
-    OrderService-->>OrderController: OrderResponse
-    OrderController-->>Client: 201 Created
-```
+#### Concurrency caveat
 
-### Error Flow
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Controller
-    participant Service
-    participant GlobalExceptionHandler
-
-    Client->>Controller: Request
-    Controller->>Service: call business logic
-    Service-->>Service: throws Exception (e.g. InsufficientStockException)
-    Service-->>Controller: exception propagates
-    Controller-->>GlobalExceptionHandler: @ExceptionHandler matched
-    GlobalExceptionHandler-->>Client: JSON ErrorResponse + HTTP status
-```
+The stock check is a read-then-write inside `@Transactional` with default isolation. This is **not safe under concurrent requests** — two simultaneous requests can both read the same stock value, both see sufficient stock, and both decrement, resulting in overselling. The transaction guarantees atomicity of the commit (stock decrement + order creation succeed or roll back together), but does **not** prevent the race. See [Roadmap](#roadmap) for planned mitigations.
 
 ---
 
@@ -251,7 +97,7 @@ sequenceDiagram
 
 ## Configuration
 
-The application is configured entirely through environment variables for the database connection.
+Environment variables for the database connection:
 
 ```bash
 export DB_URL="jdbc:postgresql://localhost:5432/ecommerce"
@@ -266,19 +112,6 @@ $env:DB_URL = "jdbc:postgresql://localhost:5432/ecommerce"
 $env:DB_USERNAME = "postgres"
 $env:DB_PASSWORD = "your_password"
 ```
-
-### Key Properties
-
-| Property                          | Default | Description                                    |
-|-----------------------------------|---------|------------------------------------------------|
-| `spring.datasource.url`           | —       | JDBC URL (**required**)                        |
-| `spring.datasource.username`      | —       | DB username (**required**)                     |
-| `spring.datasource.password`      | —       | DB password (**required**)                     |
-| `spring.jpa.hibernate.ddl-auto`   | `update`| Auto-create/update schema (dev convenience)    |
-| `spring.jpa.show-sql`             | `true`  | Logs generated SQL (set `false` in production) |
-| `spring.datasource.hikari.auto-commit` | `false`| Disables auto-commit; rely on `@Transactional` |
-
-> **Production note**: replace `ddl-auto=update` with Flyway/Liquibase migrations and `ddl-auto=validate`, and disable SQL logging.
 
 ---
 
@@ -307,7 +140,7 @@ java -jar target/ecommerce-0.0.1-SNAPSHOT.jar
 
 Once running, interactive docs are available at:
 
-- **Swagger UI:** `http://localhost:8080/swagger-ui.html`
+- **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
 - **OpenAPI JSON:** `http://localhost:8080/v3/api-docs`
 
 ### Health / Smoke Test
@@ -396,7 +229,7 @@ curl -X POST http://localhost:8080/order/place \
 | `productId`    | Positive                              |
 | `quantity`     | At least 1                            |
 
-Order placement also verifies the product exists, is available, and has enough stock — otherwise the transaction is rejected and rolled back.
+Order placement also verifies the product exists, is available, and has enough stock at the time of the request — otherwise the transaction is rejected and rolled back. This check is **not race-condition-safe** (see [Concurrency caveat](#concurrency-caveat)).
 
 ---
 
@@ -432,27 +265,9 @@ Validation errors return a field-to-message map:
 
 ---
 
-## Design Decisions
-
-| Decision                        | Rationale                                                                   |
-|---------------------------------|-----------------------------------------------------------------------------|
-| Layered architecture            | Clear separation of web, business, and persistence concerns                  |
-| Record-based DTOs               | Immutable, compact request/response contracts decoupled from JPA entities    |
-| `@Transactional` order placement| Guarantees atomic stock decrement + order creation                          |
-| Custom exception types          | Domain-specific exceptions (`InsufficientStockException`, etc.) map cleanly to status codes |
-| `@RestControllerAdvice`         | Single place for error mapping, no scattered try/catch                      |
-| Environment variables           | No credentials in source control                                            |
-| Image stored as BLOB            | Simple self-contained storage (swap to object storage at scale)             |
-
----
-
 ## Testing
 
-Currently the project includes a Spring context smoke test:
-
-```
-src/test/java/com/dinesh/ecommerce/EcommerceApplicationTests.java
-```
+Currently the project includes a single Spring context smoke test (`EcommerceApplicationTests.java`). It boots the full application context and verifies it loads without errors. There are no service-level, controller-level, or repository-level tests yet.
 
 **Run tests:**
 
@@ -460,7 +275,7 @@ src/test/java/com/dinesh/ecommerce/EcommerceApplicationTests.java
 mvn test
 ```
 
-> **Note:** the context-load test boots the full application, so it needs PostgreSQL reachable with the environment variables configured. See the [Roadmap](#roadmap--suggested-improvements) for planned service/controller-level test coverage.
+> The context-load test needs PostgreSQL reachable with the environment variables configured.
 
 ---
 
@@ -473,7 +288,7 @@ mvn clean package
 java -jar target/ecommerce-0.0.1-SNAPSHOT.jar
 ```
 
-It can be containerized trivially (example `Dockerfile` concept):
+Example `Dockerfile`:
 
 ```dockerfile
 FROM eclipse-temurin:21-jre
@@ -486,13 +301,13 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ---
 
-## Roadmap / Suggested Improvements
+## Roadmap
 
+- **Stock safety**: use pessimistic locking (`@Lock(LockModeType.PESSIMISTIC_WRITE)`), an atomic `UPDATE ... SET stock_quantity = stock_quantity - ? WHERE stock_quantity >= ?`, or `SELECT ... FOR UPDATE` to prevent overselling under concurrent requests.
 - **Security**: enable the (currently commented-out) Spring Security starter — add authn/authz, password hashing, and JWT session handling.
 - **Migrations**: replace `ddl-auto=update` with Flyway/Liquibase and `ddl-auto=validate`.
 - **Pagination & filtering**: add pageable queries to list endpoints; filter products by category and price range.
 - **Order lifecycle**: order status transitions (cancel/ship/deliver), order lookup by `orderId`, and order cancellation with stock restore.
-- **Stock safety**: use pessimistic locking or atomic `UPDATE ... SET stock = stock - ?` to prevent overselling under concurrency.
 - **Image delivery**: serve images via a dedicated streaming endpoint instead of embedding base64 in JSON; add size/type limits.
 - **Test coverage**: service/controller integration tests (MockMvc + H2/Testcontainers), plus repository tests.
 - **Observability**: structured logging, metrics (Micrometer), and health/readiness probes.
